@@ -267,7 +267,7 @@
 
   function generarPdf() {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('landscape', 'mm', 'letter');
+    const doc = new jsPDF('portrait', 'mm', 'letter'); // Usamos 'portrait' y 'letter' para tamaño estándar de hoja
     const size = document.getElementById("sizeSelector").value;
 
     const sizeBase = {
@@ -288,8 +288,8 @@
     const yMargin = 10;
 
     Array.from(etiquetas).forEach((etiqueta, index) => {
-      // Si ya no cabe en la página, agregamos una nueva
-      if (yPosition + base.height > 297) {
+      // Agregar una nueva página después de cada etiqueta
+      if (index > 0) {
         doc.addPage();
         yPosition = 10; // reiniciar la posición Y
       }
