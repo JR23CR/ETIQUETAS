@@ -228,12 +228,25 @@
       });
     }
 
-    function descargarPDF() {
-      const etiquetas = document.getElementById('etiquetas');
-      if (!etiquetas.children.length) {
-        alert("No hay etiquetas generadas para exportar.");
-        return;
-      }
+   function descargarPDF() {
+  const etiquetas = document.getElementById('etiquetas');
+  if (!etiquetas.children.length) {
+    alert("No hay etiquetas generadas para exportar.");
+    return;
+  }
+
+  const opt = {
+    margin:       [10, 10, 10, 10],
+    filename:     'etiquetas.pdf',
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 3, useCORS: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' },
+    pagebreak:    { mode: ['avoid-all'] }
+  };
+
+  html2pdf().set(opt).from(etiquetas).save();
+}
+
 
       const opt = {
         margin: 0,
