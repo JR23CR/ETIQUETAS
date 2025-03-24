@@ -239,15 +239,15 @@
         const maxRows = Math.max(item.piezas.length, item.largos.length);
         const base = sizeBase[size];
         const fontSize = Math.max(14, base.baseFont - Math.floor(maxRows / 3));
-        const height = size === 'label' ? ${base.height}px : 'auto';
-        div.setAttribute('style', width: ${base.width}px; height: ${height}; font-size: ${fontSize}px; display: flex; flex-direction: column; justify-content: space-between;);
+        const height = size === 'label' ? `${base.height}px` : 'auto';
+        div.setAttribute('style', `width: ${base.width}px; height: ${height}; font-size: ${fontSize}px; display: flex; flex-direction: column; justify-content: space-between;`);
 
         let rows = '';
         for (let i = 0; i < maxRows; i++) {
-          rows += <tr><td>${item.piezas[i] ?? ''}</td><td>${item.largos[i] ?? ''}</td></tr>;
+          rows += `<tr><td>${item.piezas[i] ?? ''}</td><td>${item.largos[i] ?? ''}</td></tr>`;
         }
 
-        div.innerHTML = 
+        div.innerHTML = `
           <table>
             <tr>
               <td class="bold">Fardo No. ${item.paquete}</td>
@@ -258,7 +258,7 @@
             <tr class="bold"><td>Piezas</td><td>Largos</td></tr>
             ${rows}
           </table>
-        ;
+        `;
 
         contenedor.appendChild(div);
       });
