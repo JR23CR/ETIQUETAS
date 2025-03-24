@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Etiquetas Responsivas con Tamaño</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     input[type="file"], select, button {
@@ -165,7 +166,7 @@
       <option value="label">6x4 Adhesiva</option>
     </select>
     <button onclick="generarEtiquetas()">Generar Etiquetas</button>
-    <button class="print-button" onclick="window.print()"><span class="print-icon"></span></button>
+    <button class="print-button" onclick="generarPdf()"><span class="print-icon"></span></button>
   </div>
 
   <div id="mensajeError" style="color:red;"></div>
@@ -173,96 +174,138 @@
 <body style="background-color: #b1bd81;">
 <div id="etiquetas" class="etiquetas-container"></div>
 
-  <script>
-    let excelData = null;
+<script>
+  let excelData = null;
 
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheet = workbook.Sheets["Packing List"];
-        if (!sheet) {
-          document.getElementById("mensajeError").textContent = "❌ La hoja 'Packing List' no fue encontrada.";
-          return;
-        }
-        excelData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-        document.getElementById("mensajeError").textContent = "";
-      };
-      reader.readAsArrayBuffer(file);
-    });
+  document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets["Packing List"];
+      if (!sheet) {
+        document.getElementById("mensajeError").textContent = "❌ La hoja 'Packing List' no fue encontrada.";
+        return;
+      }
+      excelData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      document.getElementById("mensajeError").textContent = "";
+    };
+    reader.readAsArrayBuffer(file);
+  });
 
-    function generarEtiquetas() {
-      const size = document.getElementById("sizeSelector").value;
-      const contenedor = document.getElementById("etiquetas");
-      contenedor.innerHTML = '';
+  function generarEtiquetas() {
+    const size = document.getElementById("sizeSelector").value;
+    const contenedor = document.getElementById("etiquetas");
+    contenedor.innerHTML = '';
 
-      if (!excelData) return alert("Primero cargue un archivo Excel válido.");
+    if (!excelData) return alert("Primero cargue un archivo Excel válido.");
 
-      const textoC6 = excelData[5]?.[2] || '—';
-      const textoA7 = excelData[6]?.[0] || '—';
+    const textoC6 = excelData[5]?.[2] || '—';
+    const textoA7 = excelData[6]?.[0] || '—';
 
-      let paqueteActual = '', currentEtiqueta = null;
-      const etiquetas = [];
+    let paqueteActual = '', currentEtiqueta = null;
+    const etiquetas = [];
 
-      for (let i = 12; i < excelData.length; i++) {
-        const fila = excelData[i];
-        if (!fila || !fila[1]) continue;
-        const paquete = fila[1];
-        const m2 = parseFloat(fila[7]) || 0;
-        const piezas = (fila[4] || '').toString().split('\n');
-        const largos = (fila[5] || '').toString().split('\n');
+    for (let i = 12; i < excelData.length; i++) {
+      const fila = excelData[i];
+      if (!fila || !fila[1]) continue;
+      const paquete = fila[1];
+      const m2 = parseFloat(fila[7]) || 0;
+      const piezas = (fila[4] || '').toString().split('\n');
+      const largos = (fila[5] || '').toString().split('\n');
 
-        if (paquete !== paqueteActual) {
-          paqueteActual = paquete;
-          currentEtiqueta = { paquete, m2: 0, piezas: [], largos: [] };
-          etiquetas.push(currentEtiqueta);
-        }
-
-        currentEtiqueta.m2 += m2;
-        currentEtiqueta.piezas.push(...piezas);
-        currentEtiqueta.largos.push(...largos);
+      if (paquete !== paqueteActual) {
+        paqueteActual = paquete;
+        currentEtiqueta = { paquete, m2: 0, piezas: [], largos: [] };
+        etiquetas.push(currentEtiqueta);
       }
 
-      const sizeBase = {
-        small: { width: 200, baseFont: 14 },
-        medium: { width: 300, baseFont: 16 },
-        large: { width: 400, baseFont: 18 },
-        label: { width: 432, height: 288, baseFont: 18 }
-      };
-
-      etiquetas.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'etiqueta';
-
-        const maxRows = Math.max(item.piezas.length, item.largos.length);
-        const base = sizeBase[size];
-        const fontSize = Math.max(14, base.baseFont - Math.floor(maxRows / 3));
-        const height = size === 'label' ? `${base.height}px` : 'auto';
-        div.setAttribute('style', `width: ${base.width}px; height: ${height}; font-size: ${fontSize}px; display: flex; flex-direction: column; justify-content: space-between;`);
-
-        let rows = '';
-        for (let i = 0; i < maxRows; i++) {
-          rows += `<tr><td>${item.piezas[i] ?? ''}</td><td>${item.largos[i] ?? ''}</td></tr>`;
-        }
-
-        div.innerHTML = `
-          <table>
-            <tr>
-              <td class="bold">Fardo No. ${item.paquete}</td>
-              <td class="bold">${item.m2.toFixed(2)} M2</td>
-            </tr>
-            <tr><td colspan="2">${textoC6}</td></tr>
-            <tr><td colspan="2">${textoA7}</td></tr>
-            <tr class="bold"><td>Piezas</td><td>Largos</td></tr>
-            ${rows}
-          </table>
-        `;
-
-        contenedor.appendChild(div);
-      });
+      currentEtiqueta.m2 += m2;
+      currentEtiqueta.piezas.push(...piezas);
+      currentEtiqueta.largos.push(...largos);
     }
-  </script>
+
+    const sizeBase = {
+      small: { width: 200, baseFont: 14 },
+      medium: { width: 300, baseFont: 16 },
+      large: { width: 400, baseFont: 18 },
+      label: { width: 432, height: 288, baseFont: 18 }
+    };
+
+    etiquetas.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'etiqueta';
+
+      const maxRows = Math.max(item.piezas.length, item.largos.length);
+      const base = sizeBase[size];
+      const fontSize = Math.max(14, base.baseFont - Math.floor(maxRows / 3));
+      const height = size === 'label' ? `${base.height}px` : 'auto';
+      div.setAttribute('style', `width: ${base.width}px; height: ${height}; font-size: ${fontSize}px; display: flex; flex-direction: column; justify-content: space-between;`);
+
+      let rows = '';
+      for (let i = 0; i < maxRows; i++) {
+        rows += `<tr><td>${item.piezas[i] ?? ''}</td><td>${item.largos[i] ?? ''}</td></tr>`;
+      }
+
+      div.innerHTML = `
+        <table>
+          <tr>
+            <td class="bold">Fardo No. ${item.paquete}</td>
+            <td class="bold">${item.m2.toFixed(2)} M2</td>
+          </tr>
+          <tr><td colspan="2">${textoC6}</td></tr>
+          <tr><td colspan="2">${textoA7}</td></tr>
+          <tr class="bold"><td>Piezas</td><td>Largos</td></tr>
+          ${rows}
+        </table>
+      `;
+
+      contenedor.appendChild(div);
+    });
+  }
+
+  function generarPdf() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('landscape', 'mm', 'letter');
+    const size = document.getElementById("sizeSelector").value;
+
+    const sizeBase = {
+      small: { width: 200, baseFont: 14 },
+      medium: { width: 300, baseFont: 16 },
+      large: { width: 400, baseFont: 18 },
+      label: { width: 432, height: 288, baseFont: 18 }
+    };
+
+    const base = sizeBase[size];
+
+    const etiquetas = document.getElementById("etiquetas").children;
+    let yPosition = 10;
+    let xPosition = 10;
+
+    // Ajuste de espacio entre las etiquetas
+    const xMargin = 10;
+    const yMargin = 10;
+
+    Array.from(etiquetas).forEach((etiqueta, index) => {
+      // Si ya no cabe en la página, agregamos una nueva
+      if (yPosition + base.height > 297) {
+        doc.addPage();
+        yPosition = 10; // reiniciar la posición Y
+      }
+
+      // Añadir contenido de cada etiqueta al PDF
+      doc.setFontSize(base.baseFont);
+      doc.text(etiqueta.querySelector('table').innerText, xPosition + 5, yPosition + 5);
+
+      // Incrementar la posición Y para la siguiente etiqueta
+      yPosition += base.height + yMargin;
+    });
+
+    // Descargar el archivo PDF
+    doc.save('etiquetas.pdf');
+  }
+</script>
+
 </body>
 </html>
