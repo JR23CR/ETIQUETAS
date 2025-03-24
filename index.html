@@ -35,128 +35,58 @@
     .bold {
       font-weight: bold;
     }
-    button.print-button {
-      width: 100px;
-      height: 100px;
-    }
-    span.print-icon, span.print-icon::before, span.print-icon::after, button.print-button:hover .print-icon::after {
-      border: solid 4px #333;
-    }
-    span.print-icon::after {
-      border-width: 2px;
-    }
 
-    button.print-button {
-    }
-
-    span.print-icon, span.print-icon::before, span.print-icon::after, button.print-button:hover .print-icon::after {
-      box-sizing: border-box;
-      background-color: #fff;
-    }
-
-    span.print-icon {
-      position: relative;
-      display: inline-block;  
-      padding: 0;
-      margin-top: 20%;
-      width: 60%;
-      height: 35%;
-      background: #fff;
-      border-radius: 20% 20% 0 0;
-    }
-
-    span.print-icon::before {
-      content: "";
-      position: absolute;
-      bottom: 100%;
-      left: 12%;
-      right: 12%;
-      height: 110%;
-      transition: height .2s .15s;
-    }
-
-    span.print-icon::after {
-      content: "";
-      position: absolute;
-      top: 55%;
-      left: 12%;
-      right: 12%;
-      height: 0%;
-      background: #fff;
-      background-repeat: no-repeat;
-      background-size: 70% 90%;
-      background-position: center;
-      background-image: linear-gradient(
-        to top,
-        #fff 0, #fff 14%,
-        #333 14%, #333 28%,
-        #fff 28%, #fff 42%,
-        #333 42%, #333 56%,
-        #fff 56%, #fff 70%,
-        #333 70%, #333 84%,
-        #fff 84%, #fff 100%
-      );
-      transition: height .2s, border-width 0s .2s, width 0s .2s;
-    }
-
-    button.print-button:hover {
-      cursor: pointer;
-    }
-
-    button.print-button:hover .print-icon::before {
-      height:0px;
-      transition: height .2s;
-    }
-    button.print-button:hover .print-icon::after {
-      height:120%;
-      transition: height .2s .15s, border-width 0s .16s;
-    }
     @media print {
       @page {
-        size: 6in 4in landscape; /* Ajusta el tamaño de página para etiquetas 6x4 */
+        size: letter;
         margin: 0;
       }
+
       body {
-        display: block; /* Asegura que todo se muestre al imprimir */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        padding: 0;
       }
+
       .etiquetas-container {
-        display: block !important; /* Garantiza que las etiquetas se muestren correctamente */
-        visibility: visible;
-        page-break-before: always; /* Asegura que cada etiqueta esté en su propia página */
+        display: block;
+        width: 100%;
+        margin: 0 auto;
+        page-break-inside: avoid;
       }
+
       .etiqueta {
-        page-break-after: always;
-        width: 432px; /* Asegura que las etiquetas sean del tamaño adecuado */
-        height: 288px; /* Tamaño para etiquetas 6x4 */
-        margin: 10px auto;
-        font-size: 18px; /* Ajusta el tamaño de fuente */
+        width: 6.5in;
+        height: 4.5in;
+        margin: 0.25in auto;
+        font-size: 18px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         border: 1px solid black;
         box-sizing: border-box;
         padding: 8px;
+        page-break-after: always;
       }
+
       .etiqueta table {
         width: 100%;
         border-collapse: collapse;
       }
+
       .etiqueta td {
         border: 1px solid #000;
         padding: 4px;
         text-align: center;
         vertical-align: middle;
       }
-      .bold {
-        font-weight: bold;
-      }
     }
   </style>
 </head>
-<body style="background-color: #b1bd90;">
-  <div class="page-main-header_page-main-header-wrapper__erb0_" style="background-color:#D2B48C"><div class=""></div></div>
-  <h2>GENERADOR DE ETIQUETAS PARA PRODUCTO TERMINADO</h2><img src="https://www.gibor.com/sites/default/files/logo-giborv2.png" alt="Logo" style="position: absolute; top: 0; right: 0;">
-  <div class="controls" id="controles">
+<body>
+  <div class="controls">
     <input type="file" id="fileInput" accept=".xlsx, .xls" />
     <select id="sizeSelector">
       <option value="small">Pequeña</option>
@@ -165,13 +95,11 @@
       <option value="label">6x4 Adhesiva</option>
     </select>
     <button onclick="generarEtiquetas()">Generar Etiquetas</button>
-    <button class="print-button" onclick="window.print()"><span class="print-icon"></span></button>
+    <button onclick="window.print()">Imprimir</button>
   </div>
 
   <div id="mensajeError" style="color:red;"></div>
-  </body>
-<body style="background-color: #b1bd81;">
-<div id="etiquetas" class="etiquetas-container"></div>
+  <div id="etiquetas" class="etiquetas-container"></div>
 
   <script>
     let excelData = null;
@@ -240,7 +168,12 @@
         const base = sizeBase[size];
         const fontSize = Math.max(14, base.baseFont - Math.floor(maxRows / 3));
         const height = size === 'label' ? `${base.height}px` : 'auto';
-        div.setAttribute('style', `width: ${base.width}px; height: ${height}; font-size: ${fontSize}px; display: flex; flex-direction: column; justify-content: space-between;`);
+        div.style.width = `${base.width}px`;
+        div.style.height = height;
+        div.style.fontSize = `${fontSize}px`;
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.justifyContent = 'space-between';
 
         let rows = '';
         for (let i = 0; i < maxRows; i++) {
