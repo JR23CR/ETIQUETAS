@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <title>Etiquetas Responsivas con Tamaño</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Incluir jsPDF y html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     input[type="file"], select, button {
@@ -17,7 +20,17 @@
       flex-wrap: wrap;
       gap: 20px;
     }
-    .etiqueta { background-color: #fff; border: 1px solid #000; box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid; overflow: hidden; }
+    .etiqueta { 
+      background-color: #fff; 
+      border: 1px solid #000; 
+      box-sizing: border-box; 
+      padding: 8px; 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: space-between; 
+      page-break-inside: avoid; 
+      overflow: hidden; 
+    }
     .etiqueta table {
       width: 100%;
       border-collapse: collapse;
@@ -45,15 +58,11 @@
     span.print-icon::after {
       border-width: 2px;
     }
-
-    button.print-button {
-    }
-
+    button.print-button {}
     span.print-icon, span.print-icon::before, span.print-icon::after, button.print-button:hover .print-icon::after {
       box-sizing: border-box;
       background-color: #fff;
     }
-
     span.print-icon {
       position: relative;
       display: inline-block;  
@@ -64,7 +73,6 @@
       background: #fff;
       border-radius: 20% 20% 0 0;
     }
-
     span.print-icon::before {
       content: "";
       position: absolute;
@@ -74,7 +82,6 @@
       height: 110%;
       transition: height .2s .15s;
     }
-
     span.print-icon::after {
       content: "";
       position: absolute;
@@ -98,11 +105,9 @@
       );
       transition: height .2s, border-width 0s .2s, width 0s .2s;
     }
-
     button.print-button:hover {
       cursor: pointer;
     }
-
     button.print-button:hover .print-icon::before {
       height:0px;
       transition: height .2s;
@@ -113,23 +118,23 @@
     }
     @media print {
       @page {
-        size: 6in 4in landscape; /* Ajusta el tamaño de página para etiquetas 6x4 */
+        size: 4in 3in; /* Tamaño de página: 4×3 pulgadas */
         margin: 0;
       }
       body {
-        display: block; /* Asegura que todo se muestre al imprimir */
+        display: block;
       }
       .etiquetas-container {
-        display: block !important; /* Garantiza que las etiquetas se muestren correctamente */
+        display: block !important;
         visibility: visible;
-        page-break-before: always; /* Asegura que cada etiqueta esté en su propia página */
+        page-break-before: always;
       }
       .etiqueta {
         page-break-after: always;
-        width: 432px; /* Asegura que las etiquetas sean del tamaño adecuado */
-        height: 288px; /* Tamaño para etiquetas 6x4 */
+        width: 4in;
+        height: 3in;
         margin: 10px auto;
-        font-size: 18px; /* Ajusta el tamaño de fuente */
+        font-size: 18px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -154,8 +159,11 @@
   </style>
 </head>
 <body style="background-color: #b1bd90;">
-  <div class="page-main-header_page-main-header-wrapper__erb0_" style="background-color:#D2B48C"><div class=""></div></div>
-  <h2>GENERADOR DE ETIQUETAS PARA PRODUCTO TERMINADO</h2><img src="https://www.gibor.com/sites/default/files/logo-giborv2.png" alt="Logo" style="position: absolute; top: 0; right: 0;">
+  <div class="page-main-header_page-main-header-wrapper__erb0_" style="background-color:#D2B48C">
+    <div class=""></div>
+  </div>
+  <h2>GENERADOR DE ETIQUETAS PARA PRODUCTO TERMINADO</h2>
+  <img src="https://www.gibor.com/sites/default/files/logo-giborv2.png" alt="Logo" style="position: absolute; top: 0; right: 0;">
   <div class="controls" id="controles">
     <input type="file" id="fileInput" accept=".xlsx, .xls" />
     <select id="sizeSelector">
@@ -165,13 +173,14 @@
       <option value="label">6x4 Adhesiva</option>
     </select>
     <button onclick="generarEtiquetas()">Generar Etiquetas</button>
-    <button class="print-button" onclick="window.print()"><span class="print-icon"></span></button>
+    <button onclick="guardarPDF()">Guardar en PDF</button>
+    <button class="print-button" onclick="window.print()">
+      <span class="print-icon"></span>
+    </button>
   </div>
 
   <div id="mensajeError" style="color:red;"></div>
-  </body>
-<body style="background-color: #b1bd81;">
-<div id="etiquetas" class="etiquetas-container"></div>
+  <div id="etiquetas" class="etiquetas-container"></div>
 
   <script>
     let excelData = null;
@@ -262,6 +271,35 @@
 
         contenedor.appendChild(div);
       });
+    }
+
+    async function guardarPDF() {
+      const etiquetas = document.querySelectorAll('.etiqueta');
+      if (etiquetas.length === 0) {
+        alert("No hay etiquetas para guardar.");
+        return;
+      }
+      const { jsPDF } = window.jspdf;
+      // Crear documento con páginas de 4×3 pulgadas en formato horizontal (landscape)
+      const doc = new jsPDF({ orientation: "landscape", unit: "in", format: [3, 4] });
+      
+      for (let i = 0; i < etiquetas.length; i++) {
+        const etiqueta = etiquetas[i];
+        // Forzar dimensiones de la etiqueta para el PDF
+        etiqueta.style.width = "4in";
+        etiqueta.style.height = "3in";
+        
+        // Convertir la etiqueta a imagen con html2canvas
+        const canvas = await html2canvas(etiqueta, { scale: 2 });
+        const imgData = canvas.toDataURL("image/png");
+        
+        if (i > 0) {
+          doc.addPage({ orientation: "landscape", unit: "in", format: [3, 4] });
+        }
+        // Insertar la imagen ocupando toda la página
+        doc.addImage(imgData, 'PNG', 0, 0, 4, 3);
+      }
+      doc.save("etiquetas.pdf");
     }
   </script>
 </body>
